@@ -3,7 +3,7 @@ import Particles from 'react-particles-js';
 import Clarifai from 'clarifai';
 import Navigation from './components/Navigation/Navigation';
 import Logo from './components/Logo/Logo';
-import UserInfo from './components/UserInfo/UserInfo'
+// import UserInfo from './components/UserInfo/UserInfo'
 import ImageLinkForm from './components/ImageLinkForm/ImageLinkForm'
 import FaceRecognition from './components/FaceRecognition/FaceRecognition'
 import './App.css';
@@ -29,31 +29,47 @@ class App extends Component {
     super()
     this.state = {
       input: "",
-      imageURL: ""
+      imageURL: "",
+      faceBox: {},
+      imageGender: {},
+      imageAge: {},
+      imageRace: {}
     }
+  }
+
+  calculateFaceLocation = (data) => {
+    console.log(data.outputs[0].data.regions[0].data.face.multicultural_appearance.concepts[0].name + "\t" + data.outputs[0].data.regions[0].data.face.multicultural_appearance.concepts[0].value);
+
+    const clarifaiFace = data.outputs[0].data.regions[0].region_info.bounding_box;
+    const image = document.getElementById("inputimage");
+    const imgWidth = Number(image.width);
+    const imgHeight = Number(image.height);
+
+    return {
+      top: imgHeight * clarifaiFace.top_row,
+      bottom: imgHeight - (imgHeight * clarifaiFace.bottom_row),
+      left: imgWidth * clarifaiFace.left_col,
+      right: imgWidth - (imgWidth * clarifaiFace.right_col)
+    }
+
+    // this.setState({faceBox: data.outputs[0].data.regions[0].region_info.bounding_box});
+  }
+
+  displayFaceBox = (box) => {
+    this.setState({faceBox: box});
   }
 
   onInputChange = (event) => {
     this.setState({input: event.target.value});
-
-    console.log(event.target.value);
-    console.log(this.state.input);
   }
 
-  onSubmit = () => {
+  onButtonSubmit = () => {
     this.setState({imageURL: this.state.input});
 
-    console.log(this.state.imageURL);
-
-    // app.models.predict("c0c0ac362b03416da06ab3fa36fb58e3", this.state.imageURL).then(
-    //   function(response) {
-    //     // do something with response
-    //     console.log(response);
-    //   },
-    //   function(err) {
-    //     // there was an error
-    //   }
-    // );
+    // app.models.predict("c0c0ac362b03416da06ab3fa36fb58e3", this.state.imageURL)
+    app.models.predict("c0c0ac362b03416da06ab3fa36fb58e3", this.state.input)
+      .then(response => this.displayFaceBox(this.calculateFaceLocation(response)))
+      .catch(err => console.log(err));
   }
 
   render() {
@@ -65,22 +81,13 @@ class App extends Component {
         {/*<UserInfo />*/}
         <ImageLinkForm
           onInputChange={this.onInputChange}
-          onButtonSubmit={this.onSubmit} />
-        <FaceRecognition />
+          onButtonSubmit={this.onButtonSubmit} />
+        <FaceRecognition
+          imageURL={this.state.imageURL}
+          faceBox={this.state.faceBox} />
       </div>
     );
   }
 }
 
 export default App;
-
-
-// app.models.predict(
-//   Clarifai.COLOR_MODEL,
-//   // URL
-//   "https://samples.clarifai.com/metro-north.jpg"
-// ).then(function(response) {
-//     // do something with responseconsole.log(response);
-//     },
-//     function(err) {// there was an error}
-// );
